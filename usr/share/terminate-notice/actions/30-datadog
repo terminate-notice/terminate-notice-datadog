@@ -1,0 +1,60 @@
+#!/usr/bin/sh
+
+# shellcheck disable=SC1091
+. /usr/share/terminate-notice/helpers
+
+start_action "$(basename "$0")"
+
+eval "$(load_config datadog)"
+
+debug Checking API key is set
+if [ -z "${datadog_api_key}" ]
+then
+    error 2 "$(basename "$0")" "No datadog_api_key defined"
+fi
+
+debug Checking API endpoint is set
+if [ -z "${datadog_api_endpoint}" ]
+then
+    error 2 "$(basename "$0")" "No datadog_api_endpoint defined"
+fi
+
+debug Checking _HOSTNAME is set
+if [ -z "${_HOSTNAME}" ]
+then
+    error 2 "$(basename "$0")" "No _HOSTNAME defined"
+fi
+
+if [ "$VERIFY" = "1" ]
+then
+    echo "Action $(basename "$0") - INFO: Verified at start."
+    exit 0
+fi
+
+debug Try to post the status
+_POST_COUNTER=0
+_POST_MESSAGE_SENT=0
+until curl -X POST "${datadog_api_endpoint}" \
+     -H "Accept: application/json"  -H "Content-Type: application/json" \
+     -H "DD-API-KEY: ${datadog_api_key}" \
+     -d @- << EOF
+{
+  "ddsource": "terminate-notice",
+  "hostname": "$_HOSTNAME",
+  "notice": $STATUS,
+  "message": "Terminate Notice received from Metadata Service."
+}
+EOF
+do
+    _POST_COUNTER=$((_POST_COUNTER+1))
+    if [ $_POST_MESSAGE_SENT -eq 0 ] && [ $_POST_COUNTER -eq 1 ]
+    then
+        echo "Action $(basename "$0") - WARNING: Waiting for the DataDog API to become available."
+        _POST_MESSAGE_SENT=1
+    elif [ $_POST_MESSAGE_SENT -eq 1 ] && [ $_POST_COUNTER -eq 5 ]
+    then
+        error 2 "$(basename "$0")" "Failed to send"
+        exit 5
+    fi
+    sleep 2
+done
