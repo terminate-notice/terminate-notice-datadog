@@ -1,33 +1,34 @@
 #!/usr/bin/sh
+VERSION="#TAG# - #TAG_DATE#"
 
 # shellcheck disable=SC1091
 . /usr/share/terminate-notice/helpers
 
-start_action "$(basename "$0")"
+start_action "$(basename "$0")-$VERSION"
 
 eval "$(load_config datadog)"
 
 debug Checking API key is set
 if [ -z "${datadog_api_key}" ]
 then
-    error 2 "$(basename "$0")" "No datadog_api_key defined"
+    error 2 "$(basename "$0")-$VERSION" "No datadog_api_key defined"
 fi
 
 debug Checking API endpoint is set
 if [ -z "${datadog_api_endpoint}" ]
 then
-    error 2 "$(basename "$0")" "No datadog_api_endpoint defined"
+    error 2 "$(basename "$0")-$VERSION" "No datadog_api_endpoint defined"
 fi
 
 debug Checking _HOSTNAME is set
 if [ -z "${_HOSTNAME}" ]
 then
-    error 2 "$(basename "$0")" "No _HOSTNAME defined"
+    error 2 "$(basename "$0")-$VERSION" "No _HOSTNAME defined"
 fi
 
 if [ "$VERIFY" = "1" ]
 then
-    echo "Action $(basename "$0") - INFO: Verified at start."
+    echo "Action $(basename "$0")-$VERSION - INFO: Verified at start."
     exit 0
 fi
 
@@ -49,11 +50,11 @@ do
     _POST_COUNTER=$((_POST_COUNTER+1))
     if [ $_POST_MESSAGE_SENT -eq 0 ] && [ $_POST_COUNTER -eq 1 ]
     then
-        echo "Action $(basename "$0") - WARNING: Waiting for the DataDog API to become available."
+        echo "Action $(basename "$0")-$VERSION - WARNING: Waiting for the DataDog API to become available."
         _POST_MESSAGE_SENT=1
     elif [ $_POST_MESSAGE_SENT -eq 1 ] && [ $_POST_COUNTER -eq 5 ]
     then
-        error 2 "$(basename "$0")" "Failed to send"
+        error 2 "$(basename "$0")-$VERSION" "Failed to send"
         exit 5
     fi
     sleep 2
